@@ -26,8 +26,13 @@ public class UserProfileService {
 
     @Transactional
     public void createProfile(UUID userId, String displayName) {
+        createProfile(userId, displayName, null);
+    }
+
+    @Transactional
+    public void createProfile(UUID userId, String displayName, String avatarUrl) {
         UserProfile profile = new UserProfile(
-                UUID.randomUUID(), userId, displayName, null, Instant.now(), Instant.now());
+                UUID.randomUUID(), userId, displayName, avatarUrl, Instant.now(), Instant.now());
         profileRepository.save(profile);
     }
 

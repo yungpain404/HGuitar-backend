@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Progress", description = "User learning progress")
@@ -27,7 +28,8 @@ public class ProgressController {
             security = @SecurityRequirement(name = "bearerAuth"))
     @GetMapping("/me/progress")
     public ResponseEntity<UserProgressResponse> getProgress(
-            @AuthenticationPrincipal AuthenticatedUser principal) {
-        return ResponseEntity.ok(progressService.getUserProgress(principal.getUserId()));
+            @AuthenticationPrincipal AuthenticatedUser principal,
+            @RequestParam(defaultValue = "en") String lang) {
+        return ResponseEntity.ok(progressService.getUserProgress(principal.getUserId(), lang));
     }
 }

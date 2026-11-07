@@ -50,7 +50,8 @@ public class LessonController {
     @PostMapping("/lessons/{id}/complete")
     public ResponseEntity<LessonProgressResponse> completeLesson(
             @PathVariable UUID id,
+            @RequestParam(defaultValue = "en") String lang,
             @AuthenticationPrincipal AuthenticatedUser principal) {
-        return ResponseEntity.ok(progressService.completeLesson(principal.getUserId(), id));
+        return ResponseEntity.ok(progressService.completeLesson(principal.getUserId(), id, lang));
     }
 }

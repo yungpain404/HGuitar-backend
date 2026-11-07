@@ -32,6 +32,9 @@ public class Lesson {
     }
 
     public void updateSortOrder(int sortOrder) {
+        if (sortOrder < 1) {
+            throw new IllegalArgumentException("sortOrder must be >= 1");
+        }
         this.sortOrder = sortOrder;
         this.updatedAt = Instant.now();
     }
@@ -45,11 +48,17 @@ public class Lesson {
         if (this.status == PublicationStatus.ARCHIVED) {
             throw new IllegalStateException("An ARCHIVED lesson cannot be published directly. Un-archive first.");
         }
+        if (this.status == PublicationStatus.PUBLISHED) {
+            throw new IllegalStateException("This lesson is already published.");
+        }
         this.status = PublicationStatus.PUBLISHED;
         this.updatedAt = Instant.now();
     }
 
     public void archive() {
+        if (this.status == PublicationStatus.ARCHIVED) {
+            throw new IllegalStateException("This lesson is already archived.");
+        }
         this.status = PublicationStatus.ARCHIVED;
         this.updatedAt = Instant.now();
     }

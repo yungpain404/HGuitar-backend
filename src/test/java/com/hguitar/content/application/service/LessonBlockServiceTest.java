@@ -5,12 +5,10 @@ import com.hguitar.common.exception.BusinessRuleException;
 import com.hguitar.common.exception.ConflictException;
 import com.hguitar.common.exception.ResourceNotFoundException;
 import com.hguitar.content.application.dto.request.CreateLessonBlockRequest;
-import com.hguitar.content.domain.model.ContentBlockType;
+import com.hguitar.content.domain.model.BlockType;
 import com.hguitar.content.domain.model.LessonBlock;
 import com.hguitar.content.domain.repository.LessonBlockRepository;
-import com.hguitar.content.domain.repository.LessonBlockTranslationRepository;
-import com.hguitar.learning.domain.model.Lesson;
-import com.hguitar.learning.domain.repository.LessonRepository;
+import com.hguitar.content.domain.service.LessonStatusChecker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,102 +18,111 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
-import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class LessonBlockServiceTest {
 
     @Mock LessonBlockRepository blockRepository;
-    @Mock LessonBlockTranslationRepository translationRepository;
-    @Mock LessonRepository lessonRepository;
+    @Mock LessonStatusChecker lessonStatusChecker;
 
     @InjectMocks LessonBlockService service;
 
     private UUID lessonId;
     private UUID blockId;
-    private Lesson draftLesson;
-    private LessonBlock block;
 
     @BeforeEach
     void setUp() {
         lessonId = UUID.randomUUID();
         blockId = UUID.randomUUID();
-        draftLesson = new Lesson(lessonId, UUID.randomUUID(), 1, 10,
-                PublicationStatus.DRAFT, Instant.now(), Instant.now());
-        block = new LessonBlock(blockId, lessonId, ContentBlockType.TEXT, 1,
-                null, null, Instant.now(), Instant.now());
+    }
+
+    private LessonBlock blockFor(UUID ownerLessonId) {
+        return new LessonBlock(blockId, ownerLessonId, BlockType.TEXT, 1,
+                null, null, Map.of(), Instant.now(), Instant.now());
     }
 
     @Test
-    @DisplayName("createBlock — happy path saves block and translations")
+    @DisplayName("createBlock — happy path saves the block")
     void createBlock_happyPath() {
-        when(lessonRepository.findById(lessonId)).thenReturn(Optional.of(draftLesson));
+        when(lessonStatusChecker.getLessonStatus(lessonId))
+                .thenReturn(Optional.of(PublicationStatus.PUBLISHED));
         when(blockRepository.existsByLessonIdAndSortOrderAndIdNot(eq(lessonId), eq(1), any())).thenReturn(false);
-        when(blockRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(translationRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(translationRepository.findByBlockId(any())).thenReturn(List.of());
+        when(blockRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        CreateLessonBlockRequest req = new CreateLessonBlockRequest(
-                ContentBlockType.TEXT, 1, null, null, "Nội dung", "Content");
+        CreateLessonBlockRequest request = new CreateLessonBlockRequest(
+                BlockType.TEXT, 1, null, null, "Nội dung", "Content");
 
-        var resp = service.createBlock(lessonId, req);
+        var response = service.createBlock(lessonId, request);
 
-        assertThat(resp).isNotNull();
-        assertThat(resp.blockType()).isEqualTo(ContentBlockType.TEXT);
-        verify(translationRepository, times(2)).save(any());
+        assertThat(response).isNotNull();
+        assertThat(response.blockType()).isEqualTo(BlockType.TEXT);
+        assertThat(response.content()).isEqualTo("Content");
+        verify(blockRepository).save(any());
     }
 
     @Test
     @DisplayName("createBlock — throws for ARCHIVED lesson")
     void createBlock_archivedLesson_throws() {
-        Lesson archived = new Lesson(lessonId, UUID.randomUUID(), 1, 10,
-                PublicationStatus.ARCHIVED, Instant.now(), Instant.now());
-        when(lessonRepository.findById(lessonId)).thenReturn(Optional.of(archived));
+        when(lessonStatusChecker.getLessonStatus(lessonId))
+                .thenReturn(Optional.of(PublicationStatus.ARCHIVED));
 
-        CreateLessonBlockRequest req = new CreateLessonBlockRequest(
-                ContentBlockType.TEXT, 1, null, null, "x", "x");
+        CreateLessonBlockRequest request = new CreateLessonBlockRequest(
+                BlockType.TEXT, 1, null, null, "x", "x");
 
-        assertThatThrownBy(() -> service.createBlock(lessonId, req))
+        assertThatThrownBy(() -> service.createBlock(lessonId, request))
                 .isInstanceOf(BusinessRuleException.class);
+    }
+
+    @Test
+    @DisplayName("createBlock — missing lesson throws ResourceNotFoundException")
+    void createBlock_missingLesson_throws() {
+        when(lessonStatusChecker.getLessonStatus(lessonId)).thenReturn(Optional.empty());
+
+        CreateLessonBlockRequest request = new CreateLessonBlockRequest(
+                BlockType.TEXT, 1, null, null, "x", "x");
+
+        assertThatThrownBy(() -> service.createBlock(lessonId, request))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
     @DisplayName("createBlock — throws ConflictException on duplicate sortOrder")
     void createBlock_duplicateSortOrder() {
-        when(lessonRepository.findById(lessonId)).thenReturn(Optional.of(draftLesson));
+        when(lessonStatusChecker.getLessonStatus(lessonId))
+                .thenReturn(Optional.of(PublicationStatus.DRAFT));
         when(blockRepository.existsByLessonIdAndSortOrderAndIdNot(eq(lessonId), eq(1), any())).thenReturn(true);
 
-        CreateLessonBlockRequest req = new CreateLessonBlockRequest(
-                ContentBlockType.TEXT, 1, null, null, "x", "x");
+        CreateLessonBlockRequest request = new CreateLessonBlockRequest(
+                BlockType.TEXT, 1, null, null, "x", "x");
 
-        assertThatThrownBy(() -> service.createBlock(lessonId, req))
+        assertThatThrownBy(() -> service.createBlock(lessonId, request))
                 .isInstanceOf(ConflictException.class);
     }
 
     @Test
-    @DisplayName("deleteBlock — removes block and translations")
+    @DisplayName("deleteBlock — removes the block")
     void deleteBlock_happyPath() {
-        when(blockRepository.findById(blockId)).thenReturn(Optional.of(block));
+        when(blockRepository.findById(blockId)).thenReturn(Optional.of(blockFor(lessonId)));
 
         service.deleteBlock(lessonId, blockId);
 
-        verify(translationRepository).deleteByBlockId(blockId);
         verify(blockRepository).deleteById(blockId);
     }
 
     @Test
-    @DisplayName("deleteBlock — throws when block belongs to different lesson")
+    @DisplayName("deleteBlock — throws when block belongs to a different lesson")
     void deleteBlock_wrongLesson() {
-        UUID otherLessonId = UUID.randomUUID();
-        LessonBlock blockForOtherLesson = new LessonBlock(blockId, otherLessonId,
-                ContentBlockType.TEXT, 1, null, null, Instant.now(), Instant.now());
-        when(blockRepository.findById(blockId)).thenReturn(Optional.of(blockForOtherLesson));
+        when(blockRepository.findById(blockId)).thenReturn(Optional.of(blockFor(UUID.randomUUID())));
 
         assertThatThrownBy(() -> service.deleteBlock(lessonId, blockId))
                 .isInstanceOf(ResourceNotFoundException.class);

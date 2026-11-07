@@ -174,7 +174,11 @@ public class LessonService {
 
     public LessonResponse archiveLesson(UUID id) {
         Lesson lesson = requireLesson(id);
-        lesson.archive();
+        try {
+            lesson.archive();
+        } catch (IllegalStateException e) {
+            throw new BusinessRuleException(e.getMessage());
+        }
         lessonRepository.save(lesson);
         return toLessonResponse(lesson, Language.EN);
     }

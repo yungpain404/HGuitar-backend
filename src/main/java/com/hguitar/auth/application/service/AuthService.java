@@ -1,5 +1,6 @@
 package com.hguitar.auth.application.service;
 
+import com.hguitar.auth.application.dto.FirebaseIdentity;
 import com.hguitar.auth.application.dto.request.*;
 import com.hguitar.auth.application.dto.response.AuthResponse;
 import com.hguitar.auth.domain.model.Role;
@@ -86,6 +87,35 @@ public class AuthService {
         }
 
         String displayName = userProfileService.getDisplayName(user.getId());
+        return issueTokensFor(user, displayName);
+    }
+
+    /**
+     * Signs in a user who authenticated with Firebase/Google. An account is
+     * provisioned on first sign-in; later sign-ins reuse the existing account.
+     * The user never receives a local password for OAuth-only accounts.
+     */
+    @Transactional
+    public AuthResponse loginWithFirebase(FirebaseIdentity identity) {
+        User user = userRepository.findByEmail(identity.email()).orElse(null);
+
+        if (user == null) {
+            // A random, never-exposed hash keeps the password_hash constraint
+            // satisfied while disabling password login for OAuth-only accounts.
+            String unusablePasswordHash = passwordEncoder.encode(UUID.randomUUID().toString());
+            user = new User(UUID.randomUUID(), identity.email(), unusablePasswordHash,
+                    true, Set.of(Role.STUDENT), Instant.now(), Instant.now());
+            user = userRepository.save(user);
+            userProfileService.createProfile(user.getId(), identity.displayName(), identity.avatarUrl());
+        } else if (!user.isActive()) {
+            throw new BusinessRuleException("Account is disabled.");
+        }
+
+        String storedDisplayName = userProfileService.getDisplayName(user.getId());
+        String displayName = storedDisplayName == null || storedDisplayName.isBlank()
+                ? identity.displayName()
+                : storedDisplayName;
+
         return issueTokensFor(user, displayName);
     }
 

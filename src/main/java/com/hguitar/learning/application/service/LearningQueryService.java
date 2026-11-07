@@ -59,6 +59,17 @@ public class LearningQueryService {
     }
 
     @Transactional(readOnly = true)
+    public ModuleResponse getModule(UUID id, String lang) {
+        Language language = Language.fromCode(lang);
+        Module module = moduleRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Module not found."));
+        if (module.getStatus() == PublicationStatus.ARCHIVED) {
+            throw new ResourceNotFoundException("Module not found.");
+        }
+        return toModuleResponse(module, language);
+    }
+
+    @Transactional(readOnly = true)
     public List<ModuleResponse> getModulesByCourse(UUID courseId, String lang) {
         Language language = Language.fromCode(lang);
         // Verify course exists
@@ -103,7 +114,7 @@ public class LearningQueryService {
 
     private ModuleResponse toModuleResponse(Module m, Language lang) {
         return new ModuleResponse(m.getId(), m.getCourseId(), m.getSortOrder(),
-                m.getStatus(), m.getTitle(lang), null);
+                m.getStatus(), m.getTitle(lang), m.getDescription(lang));
     }
 
     private LessonResponse toLessonResponse(Lesson l, Language lang) {

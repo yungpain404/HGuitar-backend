@@ -42,6 +42,12 @@ public class LessonRepositoryAdapter implements LessonRepository {
     }
 
     @Override
+    public List<Lesson> findAllByIds(Collection<UUID> ids) {
+        if (ids.isEmpty()) return List.of();
+        return jpa.findAllById(ids).stream().map(this::toDomain).toList();
+    }
+
+    @Override
     public List<Lesson> findByModuleId(UUID moduleId) {
         return jpa.findByModuleIdOrderBySortOrder(moduleId).stream().map(this::toDomain).toList();
     }

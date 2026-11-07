@@ -42,5 +42,11 @@ public class Module {
         return t != null ? t.title() : "";
     }
 
+    public String getDescription(Language language) {
+        ModuleTranslation t = translations.get(language);
+        if (t == null) t = translations.get(Language.EN);
+        return t != null ? t.description() : "";
+    }
+
     public record ModuleTranslation(String title, String description) {}
 }

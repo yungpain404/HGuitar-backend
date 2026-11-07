@@ -1,5 +1,6 @@
 package com.hguitar.progress.application.service;
 
+import com.hguitar.common.domain.Language;
 import com.hguitar.common.exception.ResourceNotFoundException;
 import com.hguitar.learning.domain.model.Lesson;
 import com.hguitar.learning.domain.repository.LessonRepository;
@@ -12,7 +13,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class ProgressService {
@@ -27,7 +31,7 @@ public class ProgressService {
     }
 
     @Transactional
-    public LessonProgressResponse completeLesson(UUID userId, UUID lessonId) {
+    public LessonProgressResponse completeLesson(UUID userId, UUID lessonId, String lang) {
         // Verify lesson exists
         Lesson lesson = lessonRepository.findById(lessonId)
                 .orElseThrow(() -> new ResourceNotFoundException("Lesson not found."));
@@ -40,16 +44,24 @@ public class ProgressService {
         progress.complete();
         progress = progressRepository.save(progress);
 
-        return new LessonProgressResponse(progress.getLessonId(),
-                progress.getStatus(), progress.getCompletedAt());
+        return toResponse(progress, lesson, Language.fromCode(lang));
     }
 
     @Transactional(readOnly = true)
-    public UserProgressResponse getUserProgress(UUID userId) {
+    public UserProgressResponse getUserProgress(UUID userId, String lang) {
+        Language language = Language.fromCode(lang);
         List<LessonProgress> progressList = progressRepository.findByUserId(userId);
 
+        // Resolve lesson titles in a single batch query to keep the progress view cheap.
+        List<UUID> lessonIds = progressList.stream()
+                .map(LessonProgress::getLessonId)
+                .toList();
+        Map<UUID, Lesson> lessons = lessonRepository.findAllByIds(lessonIds)
+                .stream()
+                .collect(Collectors.toMap(Lesson::getId, Function.identity()));
+
         List<LessonProgressResponse> responses = progressList.stream()
-                .map(p -> new LessonProgressResponse(p.getLessonId(), p.getStatus(), p.getCompletedAt()))
+                .map(p -> toResponse(p, lessons.get(p.getLessonId()), language))
                 .toList();
 
         long completedCount = progressList.stream()
@@ -57,5 +69,11 @@ public class ProgressService {
                 .count();
 
         return new UserProgressResponse((int) completedCount, responses);
+    }
+
+    private LessonProgressResponse toResponse(LessonProgress progress, Lesson lesson, Language language) {
+        String title = lesson != null ? lesson.getTitle(language) : "";
+        return new LessonProgressResponse(progress.getLessonId(), title,
+                progress.getStatus(), progress.getCompletedAt());
     }
 }

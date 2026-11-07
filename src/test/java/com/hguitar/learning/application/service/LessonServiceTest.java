@@ -5,15 +5,11 @@ import com.hguitar.common.domain.PublicationStatus;
 import com.hguitar.common.exception.BusinessRuleException;
 import com.hguitar.common.exception.ConflictException;
 import com.hguitar.common.exception.ResourceNotFoundException;
-import com.hguitar.content.domain.repository.LessonBlockRepository;
-import com.hguitar.content.domain.repository.LessonBlockTranslationRepository;
 import com.hguitar.learning.application.dto.request.CreateLessonRequest;
 import com.hguitar.learning.application.dto.request.UpdateLessonRequest;
 import com.hguitar.learning.application.dto.response.LessonResponse;
 import com.hguitar.learning.domain.model.Lesson;
-import com.hguitar.learning.domain.model.LessonTranslation;
 import com.hguitar.learning.domain.repository.LessonRepository;
-import com.hguitar.learning.domain.repository.LessonTranslationRepository;
 import com.hguitar.learning.domain.repository.ModuleRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -24,22 +20,22 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
-import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class LessonServiceTest {
 
     @Mock LessonRepository lessonRepository;
-    @Mock LessonTranslationRepository translationRepository;
     @Mock ModuleRepository moduleRepository;
-    @Mock LessonBlockRepository blockRepository;
-    @Mock LessonBlockTranslationRepository blockTranslationRepository;
 
     @InjectMocks LessonService service;
 
@@ -52,7 +48,16 @@ class LessonServiceTest {
         moduleId = UUID.randomUUID();
         lessonId = UUID.randomUUID();
         draftLesson = new Lesson(lessonId, moduleId, 1, 10,
-                PublicationStatus.DRAFT, Instant.now(), Instant.now());
+                PublicationStatus.DRAFT,
+                Map.of(Language.EN, new Lesson.LessonTranslation("Lesson 1", "Description")),
+                Instant.now(), Instant.now());
+    }
+
+    private Lesson lessonWithStatus(PublicationStatus status) {
+        return new Lesson(lessonId, moduleId, 1, 10,
+                status,
+                Map.of(Language.EN, new Lesson.LessonTranslation("Lesson 1", "Description")),
+                Instant.now(), Instant.now());
     }
 
     // -------------------------------------------------------------------------
@@ -60,25 +65,24 @@ class LessonServiceTest {
     // -------------------------------------------------------------------------
 
     @Test
-    @DisplayName("createLesson — happy path creates lesson and two translations")
+    @DisplayName("createLesson — happy path creates a DRAFT lesson")
     void createLesson_happyPath() {
         when(moduleRepository.existsById(moduleId)).thenReturn(true);
         when(lessonRepository.existsByModuleIdAndSortOrderAndIdNot(eq(moduleId), eq(1), any())).thenReturn(false);
-        when(lessonRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(translationRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(translationRepository.findByLessonId(any())).thenReturn(List.of());
+        when(lessonRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        CreateLessonRequest req = new CreateLessonRequest(
+        CreateLessonRequest request = new CreateLessonRequest(
                 moduleId, 1, 10,
                 "Bài học 1", "Mô tả",
                 "Lesson 1", "Description");
 
-        LessonResponse resp = service.createLesson(req);
+        LessonResponse response = service.createLesson(request);
 
-        assertThat(resp).isNotNull();
-        assertThat(resp.status()).isEqualTo(PublicationStatus.DRAFT);
-        assertThat(resp.sortOrder()).isEqualTo(1);
-        verify(translationRepository, times(2)).save(any());
+        assertThat(response).isNotNull();
+        assertThat(response.status()).isEqualTo(PublicationStatus.DRAFT);
+        assertThat(response.sortOrder()).isEqualTo(1);
+        assertThat(response.title()).isEqualTo("Lesson 1");
+        verify(lessonRepository).save(any());
     }
 
     @Test
@@ -86,10 +90,10 @@ class LessonServiceTest {
     void createLesson_moduleNotFound() {
         when(moduleRepository.existsById(moduleId)).thenReturn(false);
 
-        CreateLessonRequest req = new CreateLessonRequest(
+        CreateLessonRequest request = new CreateLessonRequest(
                 moduleId, 1, 10, "T", null, "T", null);
 
-        assertThatThrownBy(() -> service.createLesson(req))
+        assertThatThrownBy(() -> service.createLesson(request))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
@@ -99,10 +103,10 @@ class LessonServiceTest {
         when(moduleRepository.existsById(moduleId)).thenReturn(true);
         when(lessonRepository.existsByModuleIdAndSortOrderAndIdNot(eq(moduleId), eq(1), any())).thenReturn(true);
 
-        CreateLessonRequest req = new CreateLessonRequest(
+        CreateLessonRequest request = new CreateLessonRequest(
                 moduleId, 1, 10, "T", null, "T", null);
 
-        assertThatThrownBy(() -> service.createLesson(req))
+        assertThatThrownBy(() -> service.createLesson(request))
                 .isInstanceOf(ConflictException.class);
     }
 
@@ -114,20 +118,18 @@ class LessonServiceTest {
     @DisplayName("publishLesson — transitions DRAFT → PUBLISHED")
     void publishLesson_fromDraft() {
         when(lessonRepository.findById(lessonId)).thenReturn(Optional.of(draftLesson));
-        when(lessonRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(translationRepository.findByLessonId(lessonId)).thenReturn(List.of());
+        when(lessonRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        LessonResponse resp = service.publishLesson(lessonId);
+        LessonResponse response = service.publishLesson(lessonId);
 
-        assertThat(resp.status()).isEqualTo(PublicationStatus.PUBLISHED);
+        assertThat(response.status()).isEqualTo(PublicationStatus.PUBLISHED);
     }
 
     @Test
     @DisplayName("publishLesson — throws BusinessRuleException when already PUBLISHED")
     void publishLesson_alreadyPublished() {
-        Lesson published = new Lesson(lessonId, moduleId, 1, 10,
-                PublicationStatus.PUBLISHED, Instant.now(), Instant.now());
-        when(lessonRepository.findById(lessonId)).thenReturn(Optional.of(published));
+        when(lessonRepository.findById(lessonId))
+                .thenReturn(Optional.of(lessonWithStatus(PublicationStatus.PUBLISHED)));
 
         assertThatThrownBy(() -> service.publishLesson(lessonId))
                 .isInstanceOf(BusinessRuleException.class);
@@ -140,29 +142,35 @@ class LessonServiceTest {
     @Test
     @DisplayName("archiveLesson — transitions PUBLISHED → ARCHIVED")
     void archiveLesson_fromPublished() {
-        Lesson published = new Lesson(lessonId, moduleId, 1, 10,
-                PublicationStatus.PUBLISHED, Instant.now(), Instant.now());
-        when(lessonRepository.findById(lessonId)).thenReturn(Optional.of(published));
-        when(lessonRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(translationRepository.findByLessonId(lessonId)).thenReturn(List.of());
+        when(lessonRepository.findById(lessonId))
+                .thenReturn(Optional.of(lessonWithStatus(PublicationStatus.PUBLISHED)));
+        when(lessonRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        LessonResponse resp = service.archiveLesson(lessonId);
+        LessonResponse response = service.archiveLesson(lessonId);
 
-        assertThat(resp.status()).isEqualTo(PublicationStatus.ARCHIVED);
+        assertThat(response.status()).isEqualTo(PublicationStatus.ARCHIVED);
+    }
+
+    @Test
+    @DisplayName("archiveLesson — throws BusinessRuleException when already ARCHIVED")
+    void archiveLesson_alreadyArchived() {
+        when(lessonRepository.findById(lessonId))
+                .thenReturn(Optional.of(lessonWithStatus(PublicationStatus.ARCHIVED)));
+
+        assertThatThrownBy(() -> service.archiveLesson(lessonId))
+                .isInstanceOf(BusinessRuleException.class);
     }
 
     @Test
     @DisplayName("unarchiveLesson — transitions ARCHIVED → DRAFT")
     void unarchiveLesson_fromArchived() {
-        Lesson archived = new Lesson(lessonId, moduleId, 1, 10,
-                PublicationStatus.ARCHIVED, Instant.now(), Instant.now());
-        when(lessonRepository.findById(lessonId)).thenReturn(Optional.of(archived));
-        when(lessonRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(translationRepository.findByLessonId(lessonId)).thenReturn(List.of());
+        when(lessonRepository.findById(lessonId))
+                .thenReturn(Optional.of(lessonWithStatus(PublicationStatus.ARCHIVED)));
+        when(lessonRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        LessonResponse resp = service.unarchiveLesson(lessonId);
+        LessonResponse response = service.unarchiveLesson(lessonId);
 
-        assertThat(resp.status()).isEqualTo(PublicationStatus.DRAFT);
+        assertThat(response.status()).isEqualTo(PublicationStatus.DRAFT);
     }
 
     // -------------------------------------------------------------------------
@@ -170,23 +178,20 @@ class LessonServiceTest {
     // -------------------------------------------------------------------------
 
     @Test
-    @DisplayName("deleteLesson — deletes a DRAFT lesson with cascade")
+    @DisplayName("deleteLesson — deletes a DRAFT lesson")
     void deleteLesson_draft() {
         when(lessonRepository.findById(lessonId)).thenReturn(Optional.of(draftLesson));
-        when(blockRepository.findByLessonId(lessonId)).thenReturn(List.of());
 
         service.deleteLesson(lessonId);
 
         verify(lessonRepository).deleteById(lessonId);
-        verify(translationRepository).deleteByLessonId(lessonId);
     }
 
     @Test
     @DisplayName("deleteLesson — throws BusinessRuleException for PUBLISHED lesson")
     void deleteLesson_published_throws() {
-        Lesson published = new Lesson(lessonId, moduleId, 1, 10,
-                PublicationStatus.PUBLISHED, Instant.now(), Instant.now());
-        when(lessonRepository.findById(lessonId)).thenReturn(Optional.of(published));
+        when(lessonRepository.findById(lessonId))
+                .thenReturn(Optional.of(lessonWithStatus(PublicationStatus.PUBLISHED)));
 
         assertThatThrownBy(() -> service.deleteLesson(lessonId))
                 .isInstanceOf(BusinessRuleException.class)
@@ -200,13 +205,12 @@ class LessonServiceTest {
     @Test
     @DisplayName("updateLesson — throws BusinessRuleException for ARCHIVED lesson")
     void updateLesson_archived_throws() {
-        Lesson archived = new Lesson(lessonId, moduleId, 1, 10,
-                PublicationStatus.ARCHIVED, Instant.now(), Instant.now());
-        when(lessonRepository.findById(lessonId)).thenReturn(Optional.of(archived));
+        when(lessonRepository.findById(lessonId))
+                .thenReturn(Optional.of(lessonWithStatus(PublicationStatus.ARCHIVED)));
 
-        UpdateLessonRequest req = new UpdateLessonRequest(1, 10, "T", null, "T", null);
+        UpdateLessonRequest request = new UpdateLessonRequest(1, 10, "T", null, "T", null);
 
-        assertThatThrownBy(() -> service.updateLesson(lessonId, req))
+        assertThatThrownBy(() -> service.updateLesson(lessonId, request))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("ARCHIVED");
     }

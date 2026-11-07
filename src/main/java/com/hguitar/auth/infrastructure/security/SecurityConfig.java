@@ -58,7 +58,7 @@ public class SecurityConfig {
             )
             .authorizeHttpRequests(auth -> auth
                 // API docs — public
-                .requestMatchers("/swagger-ui/**", "/api-docs/**").permitAll()
+                .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/api-docs/**").permitAll()
                 // Auth endpoints — public
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 // Read-only catalog — public (students and guests can browse)
@@ -66,6 +66,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/modules/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/lessons/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/chords/**").permitAll()
+                // Students may mark their own lessons complete
+                .requestMatchers(HttpMethod.POST, "/api/v1/lessons/*/complete").authenticated()
                 // Lesson + content management — CONTENT_EDITOR or ADMIN only
                 .requestMatchers(HttpMethod.POST,   "/api/v1/lessons/**").hasAnyRole("CONTENT_EDITOR", "ADMIN")
                 .requestMatchers(HttpMethod.PUT,    "/api/v1/lessons/**").hasAnyRole("CONTENT_EDITOR", "ADMIN")

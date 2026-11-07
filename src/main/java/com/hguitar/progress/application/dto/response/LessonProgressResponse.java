@@ -7,6 +7,7 @@ import java.util.UUID;
 
 public record LessonProgressResponse(
         UUID lessonId,
+        String title,
         LessonProgress.Status status,
         Instant completedAt
 ) {}

@@ -18,7 +18,7 @@ WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 
 # Expose port (Render sẽ gán PORT qua env var)
-EXPOSE 8080
+EXPOSE 5501
 
 # Lệnh chạy: dùng shell form để biến $PORT được thay thế
 ENTRYPOINT java -Dserver.port=$PORT -jar app.jar

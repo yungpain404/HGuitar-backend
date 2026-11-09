@@ -152,7 +152,7 @@ Or run the packaged JAR:
 java -jar target/guitar-learning-backend-0.0.1-SNAPSHOT.jar
 ```
 
-The API will be available at `http://localhost:8080` (default).
+The API will be available at `http://localhost:5501` (default).
 
 ---
 
@@ -165,7 +165,7 @@ Create a `.env` file (or set system environment variables) based on `.env.exampl
 | `JWT_SECRET` | Secret key for signing JWTs (min 256 bits) | `changeme-...` |
 | `JWT_ACCESS_EXPIRY_MS` | Access token expiry in milliseconds | `900000` (15 min) |
 | `JWT_REFRESH_EXPIRY_MS` | Refresh token expiry in milliseconds | `604800000` (7 days) |
-| `SERVER_PORT` | Application port | `8080` |
+| `SERVER_PORT` | Application port | `5501` |
 | `CORS_ALLOWED_ORIGINS` | Comma-separated allowed CORS origins | `http://localhost:5500,...` |
 | `FIREBASE_PROJECT_ID` | Firebase project ID for Google ID token verification | *(empty)* |
 
@@ -178,13 +178,13 @@ Create a `.env` file (or set system environment variables) based on `.env.exampl
 Once the application is running, interactive API docs are available via Swagger UI:
 
 ```
-http://localhost:8080/swagger-ui.html
+http://localhost:5501/swagger-ui.html
 ```
 
 OpenAPI JSON:
 
 ```
-http://localhost:8080/api-docs
+http://localhost:5501/api-docs
 ```
 
 ### Key Endpoints

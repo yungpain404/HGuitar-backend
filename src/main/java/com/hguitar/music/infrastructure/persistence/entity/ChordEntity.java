@@ -1,5 +1,6 @@
 package com.hguitar.music.infrastructure.persistence.entity;
 
+import com.hguitar.music.domain.model.ChordCategory;
 import com.hguitar.onboarding.domain.model.GuitarType;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -24,6 +25,10 @@ public class ChordEntity {
     @Enumerated(EnumType.STRING)
     private GuitarType guitarType;
 
+    @Column(name = "category", nullable = false, length = 20)
+    @Enumerated(EnumType.STRING)
+    private ChordCategory category;
+
     @Column(name = "description", length = 1000)
     private String description;
 
@@ -37,10 +42,12 @@ public class ChordEntity {
 
     protected ChordEntity() {}
 
-    public ChordEntity(UUID id, String name, GuitarType guitarType, String description) {
+    public ChordEntity(UUID id, String name, GuitarType guitarType, ChordCategory category,
+                       String description) {
         this.id = id;
         this.name = name;
         this.guitarType = guitarType;
+        this.category = category;
         this.description = description;
     }
 
@@ -48,6 +55,8 @@ public class ChordEntity {
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public GuitarType getGuitarType() { return guitarType; }
+    public ChordCategory getCategory() { return category; }
+    public void setCategory(ChordCategory category) { this.category = category; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
     public List<ChordPositionEntity> getPositions() { return positions; }

@@ -1,6 +1,7 @@
 package com.hguitar.music.infrastructure.persistence.repository;
 
 import com.hguitar.music.domain.model.Chord;
+import com.hguitar.music.domain.model.ChordCategory;
 import com.hguitar.music.domain.model.ChordPosition;
 import com.hguitar.music.domain.repository.ChordRepository;
 import com.hguitar.music.infrastructure.persistence.entity.ChordEntity;
@@ -25,7 +26,7 @@ public class ChordRepositoryAdapter implements ChordRepository {
     public Chord save(Chord chord) {
         ChordEntity entity = jpa.findById(chord.getId())
                 .orElse(new ChordEntity(chord.getId(), chord.getName(),
-                        chord.getGuitarType(), chord.getDescription()));
+                        chord.getGuitarType(), chord.getCategory(), chord.getDescription()));
         entity.setName(chord.getName());
         entity.setDescription(chord.getDescription());
         return toDomain(jpa.save(entity));
@@ -46,12 +47,17 @@ public class ChordRepositoryAdapter implements ChordRepository {
         return jpa.findByGuitarTypeOrderByName(guitarType).stream().map(this::toDomain).toList();
     }
 
+    @Override
+    public List<Chord> findByCategory(ChordCategory category) {
+        return jpa.findByCategoryOrderByName(category).stream().map(this::toDomain).toList();
+    }
+
     private Chord toDomain(ChordEntity e) {
         List<ChordPosition> positions = e.getPositions().stream()
                 .map(p -> new ChordPosition(p.getId(), e.getId(), p.getPositionNumber(),
                         p.getBaseFret(), p.getFingersJson(), p.getCreatedAt()))
                 .toList();
-        return new Chord(e.getId(), e.getName(), e.getGuitarType(), e.getDescription(),
-                positions, e.getCreatedAt());
+        return new Chord(e.getId(), e.getName(), e.getGuitarType(), e.getCategory(),
+                e.getDescription(), positions, e.getCreatedAt());
     }
 }

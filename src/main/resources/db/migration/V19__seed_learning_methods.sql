@@ -46,5 +46,5 @@ INSERT INTO learning.learning_method_translations (id, method_id, language, titl
      N'Vấn đề lớn nhất của người mới là đổi hợp âm bị gián đoạn. Phương pháp này tập trung vào chuyển hợp âm mượt mà.',
      N'["Bước 1: Chọn hai hợp âm thường đổi cùng (ví dụ G ↔ C)", "Bước 2: Đặt ngón tay, nhấc lên, đặt lại lặp đi lặp lại 20 lần", "Bước 3: Dùng metronome, đổi hợp âm mỗi 4 nhịp rồi giảm dần xuống 2 nhịp", "Bước 4: Áp dụng vào bài hát thực tế"]'),
     (NEWID(), @m4_id, 'EN', N'Fast chord changes',
-     N"The biggest beginner hurdle is choppy chord changes. This method focuses on smooth transitions.",
+     N'The biggest beginner hurdle is choppy chord changes. This method focuses on smooth transitions.',
      N'["Step 1: Pick two chords that change often (e.g. G ↔ C)", "Step 2: Place fingers, lift, replace — repeat 20 times", "Step 3: With metronome, change every 4 beats then reduce to 2 beats", "Step 4: Apply to real songs"]');

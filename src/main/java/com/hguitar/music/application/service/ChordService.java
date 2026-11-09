@@ -4,6 +4,7 @@ import com.hguitar.common.exception.ResourceNotFoundException;
 import com.hguitar.music.application.dto.response.ChordPositionResponse;
 import com.hguitar.music.application.dto.response.ChordResponse;
 import com.hguitar.music.domain.model.Chord;
+import com.hguitar.music.domain.model.ChordCategory;
 import com.hguitar.music.domain.repository.ChordRepository;
 import com.hguitar.onboarding.domain.model.GuitarType;
 import org.springframework.stereotype.Service;
@@ -22,9 +23,12 @@ public class ChordService {
     }
 
     @Transactional(readOnly = true)
-    public List<ChordResponse> getChords(String guitarType) {
+    public List<ChordResponse> getChords(String guitarType, String category) {
         List<Chord> chords;
-        if (guitarType != null) {
+        if (category != null) {
+            ChordCategory chordCategory = ChordCategory.valueOf(category.toUpperCase());
+            chords = chordRepository.findByCategory(chordCategory);
+        } else if (guitarType != null) {
             GuitarType type = GuitarType.valueOf(guitarType.toUpperCase());
             chords = chordRepository.findByGuitarType(type);
         } else {
@@ -55,7 +59,7 @@ public class ChordService {
                 .map(p -> new ChordPositionResponse(p.getId(), p.getPositionNumber(),
                         p.getBaseFret(), p.getFingersJson()))
                 .toList();
-        return new ChordResponse(c.getId(), c.getName(), c.getGuitarType(),
+        return new ChordResponse(c.getId(), c.getName(), c.getGuitarType(), c.getCategory(),
                 c.getDescription(), positions);
     }
 }

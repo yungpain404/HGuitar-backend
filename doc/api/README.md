@@ -28,4 +28,4 @@ Tài liệu này mô tả các API backend mà frontend gọi để xây dựng 
 
 ## Cơ sở dữ liệu
 - SQL Server, quản lý schema bởi Flyway (`src/main/resources/db/migration`).
-- Migration mới nhất thêm: `V13` (cách đánh), `V14` (bài hát), `V15` (phương pháp học), `V16–V19` (seed dữ liệu mẫu).
+- Migration mới nhất thêm: `V13` (cách đánh), `V14` (bài hát), `V15` (phương pháp học), `V16–V19` (seed dữ liệu mẫu), `V20` (hướng dẫn đánh chi tiết cho cách đánh).

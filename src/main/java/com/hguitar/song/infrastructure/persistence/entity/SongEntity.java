@@ -58,7 +58,6 @@ public class SongEntity {
     private Instant updatedAt;
 
     @OneToMany(mappedBy = "song", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
-    @OrderBy("sortOrder ASC")
     private List<SongTranslationEntity> translations = new ArrayList<>();
 
     @OneToMany(mappedBy = "song", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)

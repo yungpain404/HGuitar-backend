@@ -25,8 +25,9 @@ public class ChordController {
     @Operation(summary = "List all chords")
     @GetMapping
     public ResponseEntity<List<ChordResponse>> getChords(
-            @RequestParam(required = false) String guitarType) {
-        return ResponseEntity.ok(chordService.getChords(guitarType));
+            @RequestParam(required = false) String guitarType,
+            @RequestParam(required = false) String category) {
+        return ResponseEntity.ok(chordService.getChords(guitarType, category));
     }
 
     @Operation(summary = "Get a chord by ID")

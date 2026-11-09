@@ -66,6 +66,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/modules/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/lessons/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/chords/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/songs/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/strumming-patterns/**").permitAll()
                 // Students may mark their own lessons complete
                 .requestMatchers(HttpMethod.POST, "/api/v1/lessons/*/complete").authenticated()
                 // Lesson + content management — CONTENT_EDITOR or ADMIN only

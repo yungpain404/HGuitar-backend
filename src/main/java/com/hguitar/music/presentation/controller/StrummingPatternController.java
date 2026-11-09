@@ -1,5 +1,7 @@
 package com.hguitar.music.presentation.controller;
 
+import com.hguitar.music.application.dto.response.StrummingPatternDetailResponse;
+import com.hguitar.music.application.dto.response.StrummingInstructionResponse;
 import com.hguitar.music.application.dto.response.StrummingPatternResponse;
 import com.hguitar.music.application.service.StrummingPatternService;
 import com.hguitar.music.domain.model.StrummingPattern;
@@ -32,10 +34,20 @@ public class StrummingPatternController {
         return ResponseEntity.ok(strummingPatternService.getPatterns(guitarType, difficulty));
     }
 
-    @Operation(summary = "Get a strumming pattern by ID")
+    @Operation(summary = "Get a strumming pattern detail with step-by-step instructions")
     @GetMapping("/{id}")
-    public ResponseEntity<StrummingPatternResponse> getPattern(@PathVariable UUID id) {
-        return ResponseEntity.ok(strummingPatternService.getPattern(id));
+    public ResponseEntity<StrummingPatternDetailResponse> getPatternDetail(
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "vi") String lang) {
+        return ResponseEntity.ok(strummingPatternService.getPatternDetail(id, lang));
+    }
+
+    @Operation(summary = "Get step-by-step instructions for a strumming pattern")
+    @GetMapping("/{id}/instructions")
+    public ResponseEntity<List<StrummingInstructionResponse>> getPatternInstructions(
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "vi") String lang) {
+        return ResponseEntity.ok(strummingPatternService.getPatternInstructions(id, lang));
     }
 
     @Operation(summary = "Create a strumming pattern (admin)")

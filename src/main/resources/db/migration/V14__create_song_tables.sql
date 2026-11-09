@@ -1,7 +1,8 @@
 -- V14: Song repertoire (bài hát dễ đánh) — Vietnamese & foreign songs for beginners
 -- Schema: song
 
-CREATE SCHEMA song;
+IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'song')
+    EXEC('CREATE SCHEMA song');
 
 CREATE TABLE song.songs (
     id                 UNIQUEIDENTIFIER NOT NULL DEFAULT NEWSEQUENTIALID() CONSTRAINT pk_songs PRIMARY KEY,
